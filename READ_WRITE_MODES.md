@@ -10,7 +10,9 @@ Run:
 python /path/to/canvas-ed-mcp/canvas_ed_mcp_readonly.py
 ```
 
-The read-only entry point imports the normal server and then removes every tool that is not explicitly annotated with `readOnlyHint=True` **before** starting MCP. It fails closed if the MCP SDK tool registry cannot be inspected, rather than accidentally exposing write tools.
+The read-only entry point installs a guarded `FastMCP` class **before** importing the main server module. As the existing `@mcp.tool(...)` decorators execute, only tools explicitly annotated with `readOnlyHint=True` are registered. Write-capable and unannotated functions are still valid internal Python functions, but they never enter the MCP tool registry and therefore cannot be advertised or called by the MCP client.
+
+This avoids inspecting or mutating FastMCP's private `_tool_manager` / `_tools` internals.
 
 Example client configuration:
 
@@ -64,4 +66,12 @@ Keep this server disabled unless a write operation is intentionally needed. MCP 
 
 ## Security model
 
-The split is based on each tool's MCP `readOnlyHint` annotation and uses a fail-closed policy: a tool is exposed by the read-only server only when it is explicitly marked read-only. New tools therefore default to unavailable in read-only mode until their annotation is reviewed.
+The split is based on each tool's MCP `readOnlyHint` annotation and uses a fail-closed allowlist policy:
+
+- `readOnlyHint=True` -> registered by the read-only MCP server.
+- `readOnlyHint=False` -> not registered.
+- missing/unknown annotation -> not registered.
+
+The filtering happens at decoration/registration time, not after server construction. New tools therefore default to unavailable in read-only mode until their annotation is reviewed.
+
+The original `canvas_ed_mcp.py` is unchanged and remains the intentional full read-write entry point.
