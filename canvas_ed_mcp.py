@@ -1818,6 +1818,18 @@ def format_module_items_markdown(items: List[Dict], module_name: str = "") -> st
 
         lines.append(f"### {i}. [{item_type}] {item_title}")
         lines.append(f"- **Item ID**: {item_id}")
+
+        # Canvas module item IDs are not file IDs. File module items expose
+        # the real /files/{id} identifier in content_id.
+        if item_type == "File":
+            file_id = item.get("content_id")
+            if file_id is not None:
+                lines.append(f"- **File ID**: {file_id}")
+                lines.append(
+                    "- **Use with**: `canvas_get_file_content` or "
+                    "`canvas_download_file`"
+                )
+
         if html_url:
             lines.append(f"- **URL**: {html_url}")
         if external_url:
